@@ -7,14 +7,13 @@ import {
   MicOff,
   Volume2,
   VolumeX,
-  Send,
+  ArrowRight,
   Square,
   AlertCircle,
   Loader2,
   History,
-  CheckCircle,
-  CornerDownLeft,
-  Award
+  Check,
+  ChevronDown
 } from "lucide-react";
 
 interface TurnHistoryItem {
@@ -38,113 +37,104 @@ export default function InterviewRoomPage() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [history, setHistory] = useState<TurnHistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Initialize and load report or first question
+  // Initialize and load session question
   useEffect(() => {
-    async function fetchSessionInfo() {
+    async function fetchSession() {
       try {
         const res = await fetch(`http://localhost:8000/api/v1/interview/${sessionId}/report`);
         if (res.ok) {
           const data = await res.json();
           if (data.report && data.report.question_breakdown.length > 0) {
-            const firstQ = data.report.question_breakdown[0].question;
-            setCurrentQuestion(firstQ);
+            setCurrentQuestion(data.report.question_breakdown[0].question);
           }
         }
       } catch {
-        // Handled silently
+        // Fallback handled gracefully
       }
     }
-    fetchSessionInfo();
+    fetchSession();
   }, [sessionId]);
 
   // Audio playback handler
   useEffect(() => {
-    if (audioUrl) {
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.play().catch(() => {
-          setIsPlayingAudio(false);
-        });
-        setIsPlayingAudio(true);
-      }
+    if (audioUrl && audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.play().catch(() => setIsPlayingAudio(false));
+      setIsPlayingAudio(true);
     }
   }, [audioUrl]);
 
-  // Setup Web Speech API for candidate speech transcription
-  const startSpeechRecognition = () => {
+  // Web Speech API
+  const startRecording = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorMsg("Web Speech API is not supported in this browser. You can type your answer below.");
+      setErrorMsg("Voice input not supported in this browser. Please type below.");
       return;
     }
 
     try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = true;
+      rec.lang = "en-US";
 
-      recognition.onstart = () => {
+      rec.onstart = () => {
         setIsRecording(true);
         setErrorMsg(null);
       };
 
-      recognition.onresult = (event: any) => {
-        let currentText = "";
+      rec.onresult = (event: any) => {
+        let transcript = "";
         for (let i = 0; i < event.results.length; i++) {
-          currentText += event.results[i][0].transcript + " ";
+          transcript += event.results[i][0].transcript + " ";
         }
-        setSpokenTranscript(currentText.trim());
+        setSpokenTranscript(transcript.trim());
       };
 
-      recognition.onerror = (event: any) => {
+      rec.onerror = (event: any) => {
         setIsRecording(false);
         if (event.error !== "no-speech") {
-          setErrorMsg(`Microphone input notice: ${event.error}. You can also type manually.`);
+          setErrorMsg(`Mic note: ${event.error}. You can also type manually.`);
         }
       };
 
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
+      rec.onend = () => setIsRecording(false);
 
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (e: any) {
+      recognitionRef.current = rec;
+      rec.start();
+    } catch {
       setIsRecording(false);
-      setErrorMsg("Could not access microphone. Please verify browser permissions.");
+      setErrorMsg("Unable to access microphone.");
     }
   };
 
-  const stopSpeechRecognition = () => {
+  const stopRecording = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       setIsRecording(false);
     }
   };
 
-  const handleToggleRecording = () => {
-    if (isRecording) {
-      stopSpeechRecognition();
-    } else {
-      startSpeechRecognition();
-    }
+  const handleToggleMic = () => {
+    if (isRecording) stopRecording();
+    else startRecording();
   };
 
-  const handleSubmitAnswer = async () => {
+  const handleSubmit = async () => {
     if (!spokenTranscript.trim()) {
-      setErrorMsg("Please provide your answer by speaking or typing before submitting.");
+      setErrorMsg("Please speak or enter your answer.");
       return;
     }
 
-    stopSpeechRecognition();
+    stopRecording();
     setIsSubmitting(true);
     setErrorMsg(null);
 
@@ -164,7 +154,7 @@ export default function InterviewRoomPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.detail || data.error || "Failed to submit turn.");
+        throw new Error(data.detail || data.error || "Turn submission failed.");
       }
 
       setHistory((prev) => [
@@ -179,14 +169,11 @@ export default function InterviewRoomPage() {
       setSpokenTranscript("");
 
       if (data.is_completed || !data.next_question) {
-        // Complete interview and navigate to scorecard
         router.push(`/interview/${sessionId}/report`);
       } else {
         setCurrentTurn(data.turn_number);
         setCurrentQuestion(data.next_question);
-        if (data.audio_url) {
-          setAudioUrl(data.audio_url);
-        }
+        if (data.audio_url) setAudioUrl(data.audio_url);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to submit answer.");
@@ -201,184 +188,166 @@ export default function InterviewRoomPage() {
       await fetch(`http://localhost:8000/api/v1/interview/${sessionId}/complete`, {
         method: "POST",
       });
-      router.push(`/interview/${sessionId}/report`);
-    } catch {
+    } finally {
       router.push(`/interview/${sessionId}/report`);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-4 space-y-6">
+    <div className="max-w-2xl mx-auto w-full py-4 space-y-6">
       <audio
         ref={audioRef}
         onEnded={() => setIsPlayingAudio(false)}
         className="hidden"
       />
 
-      <div className="flex items-center justify-between border-b border-zinc-200 pb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-zinc-900 text-white">
-            Question {currentTurn} of {maxTurns}
+      {/* Top Session Progress Bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+            Phase {currentTurn} of {maxTurns}
           </span>
-          <span className="text-xs text-zinc-500">Live Interview Session</span>
+          <span className="text-zinc-200">•</span>
+          <span className="text-xs text-zinc-500 font-medium">Technical Calibration</span>
         </div>
+
         <button
           type="button"
           onClick={handleEndEarly}
           disabled={isSubmitting}
-          className="text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-lg transition"
+          className="text-xs text-zinc-400 hover:text-zinc-950 transition"
         >
-          End Interview & View Report
+          End & Review
         </button>
       </div>
 
       {errorMsg && (
-        <div className="p-3.5 rounded-lg border border-red-200 bg-red-50 text-red-900 text-xs flex items-center gap-2">
+        <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-900 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Main Question & Waveform Card */}
-      <div className="bg-white rounded-2xl border border-zinc-200 p-8 shadow-sm text-center space-y-6">
-        <div className="flex items-center justify-center gap-2 text-xs font-semibold tracking-wider uppercase text-zinc-500">
+      {/* Focus Audio & Teleprompter Card */}
+      <div className="bg-white rounded-3xl border border-zinc-200/80 p-8 shadow-sm text-center space-y-6">
+        {/* Sleek Waveform / Voice Status */}
+        <div className="flex items-center justify-center gap-2">
           {isPlayingAudio ? (
-            <span className="inline-flex items-center gap-1.5 text-zinc-950 font-medium">
-              <Volume2 className="w-4 h-4 text-zinc-900 animate-pulse" />
-              Interviewer Speaking
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-950">
+              <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+              <span>Interviewer Speaking</span>
             </span>
           ) : isRecording ? (
-            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-              <Mic className="w-4 h-4 text-emerald-600 animate-pulse" />
-              Listening to Candidate...
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>Listening...</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-zinc-500">
-              <VolumeX className="w-4 h-4" />
-              Awaiting Candidate Answer
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+              <VolumeX className="w-3.5 h-3.5" />
+              <span>Ready for Answer</span>
             </span>
           )}
         </div>
 
-        {/* Minimalist Audio Waveform Simulation */}
-        <div className="h-14 flex items-center justify-center gap-1.5">
-          {[12, 28, 48, 20, 56, 32, 16, 44, 24, 60, 36, 18, 40, 22].map((height, i) => (
+        {/* Minimalist Sound Wave Indicator */}
+        <div className="h-10 flex items-center justify-center gap-1">
+          {[14, 26, 38, 18, 44, 28, 12, 36, 20, 48, 30, 16].map((h, i) => (
             <span
               key={i}
               style={{
-                height: isPlayingAudio || isRecording ? `${height}px` : "6px",
-                transition: "height 0.15s ease",
+                height: isPlayingAudio || isRecording ? `${h}px` : "4px",
+                transition: "height 0.12s ease",
               }}
               className={`w-1 rounded-full ${
-                isPlayingAudio
-                  ? "bg-zinc-900"
-                  : isRecording
-                  ? "bg-emerald-600"
-                  : "bg-zinc-200"
+                isPlayingAudio ? "bg-zinc-950" : isRecording ? "bg-emerald-500" : "bg-zinc-200"
               }`}
             />
           ))}
         </div>
 
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl md:text-2xl font-semibold text-zinc-950 tracking-tight leading-snug">
-            {currentQuestion || "Preparing initial interview question..."}
-          </h2>
-        </div>
+        {/* Question Heading */}
+        <h2 className="text-lg md:text-xl font-medium text-zinc-950 tracking-tight leading-relaxed max-w-xl mx-auto">
+          {currentQuestion || "Preparing interview question..."}
+        </h2>
       </div>
 
-      {/* Response Capture Area */}
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-2">
-            <span>Your Spoken or Typed Answer</span>
-            {isRecording && (
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-            )}
-          </label>
-          <span className="text-xs text-zinc-400">
-            {spokenTranscript.split(/\s+/).filter(Boolean).length} words
-          </span>
+      {/* Real-time Subtitle / Spoken Transcript Bar */}
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-sm space-y-3">
+        <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400">
+          <span>Candidate Response</span>
+          <span>{spokenTranscript.split(/\s+/).filter(Boolean).length} words</span>
         </div>
 
         <textarea
-          rows={5}
+          rows={3}
           value={spokenTranscript}
           onChange={(e) => setSpokenTranscript(e.target.value)}
-          placeholder="Click Start Speaking to talk into your microphone, or type your answer here..."
-          className="w-full px-4 py-3 rounded-xl border border-zinc-300 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-950/10 focus:border-zinc-950 transition leading-relaxed"
+          placeholder="Speak into your microphone or type your response here..."
+          className="w-full text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none resize-none leading-relaxed bg-transparent"
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        {/* Floating Minimal Controls */}
+        <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
           <button
             type="button"
-            onClick={handleToggleRecording}
-            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition flex items-center gap-2 ${
+            onClick={handleToggleMic}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition flex items-center gap-1.5 ${
               isRecording
-                ? "bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
-                : "bg-white border-zinc-300 text-zinc-800 hover:bg-zinc-50"
+                ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                : "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
             }`}
           >
-            {isRecording ? (
-              <>
-                <Square className="w-4 h-4 fill-current text-red-600" />
-                <span>Stop Recording</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-4 h-4 text-zinc-700" />
-                <span>Start Speaking (Microphone)</span>
-              </>
-            )}
+            {isRecording ? <Square className="w-3.5 h-3.5 fill-current" /> : <Mic className="w-3.5 h-3.5" />}
+            <span>{isRecording ? "Stop" : "Mic"}</span>
           </button>
 
           <button
             type="button"
-            onClick={handleSubmitAnswer}
+            onClick={handleSubmit}
             disabled={isSubmitting || !spokenTranscript.trim()}
-            className="px-6 py-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-sm transition flex items-center gap-2 shadow-sm disabled:opacity-40"
+            className="px-4 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium transition flex items-center gap-1.5 disabled:opacity-40 shadow-sm"
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Evaluating Response...</span>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Evaluating...</span>
               </>
             ) : (
               <>
-                <span>Submit Answer</span>
-                <Send className="w-4 h-4" />
+                <span>Submit</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Turn History Drawer */}
+      {/* Collapsible History Drawer */}
       {history.length > 0 && (
-        <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-zinc-900 border-b border-zinc-100 pb-3">
-            <History className="w-4 h-4 text-zinc-500" />
-            <span>Interview Timeline ({history.length} completed turns)</span>
-          </div>
+        <div className="border border-zinc-200/70 rounded-xl overflow-hidden bg-white">
+          <button
+            type="button"
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-zinc-500 hover:bg-zinc-50 transition"
+          >
+            <span className="flex items-center gap-1.5 font-medium">
+              <History className="w-3.5 h-3.5" />
+              <span>Transcript Timeline ({history.length})</span>
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+          </button>
 
-          <div className="space-y-4">
-            {history.map((item, idx) => (
-              <div key={idx} className="p-4 rounded-lg bg-zinc-50/70 border border-zinc-200 space-y-2">
-                <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
-                  <span>Turn {item.turn_number}</span>
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+          {showHistory && (
+            <div className="p-4 border-t border-zinc-100 space-y-3 max-h-60 overflow-y-auto text-xs">
+              {history.map((item, idx) => (
+                <div key={idx} className="space-y-1 pb-2 border-b border-zinc-50 last:border-none">
+                  <div className="font-semibold text-zinc-800">Q{item.turn_number}: {item.question}</div>
+                  <div className="text-zinc-600 pl-2 border-l border-zinc-200">{item.answer}</div>
                 </div>
-                <p className="text-sm font-medium text-zinc-900">{item.question}</p>
-                <div className="text-xs text-zinc-600 bg-white p-3 rounded-md border border-zinc-200">
-                  <span className="font-semibold text-zinc-700 block mb-0.5">Your Response:</span>
-                  {item.answer}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
