@@ -13,7 +13,10 @@ import {
   Loader2,
   History,
   Check,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  Sparkles,
+  Edit3
 } from "lucide-react";
 
 interface TurnHistoryItem {
@@ -38,12 +41,13 @@ export default function InterviewRoomPage() {
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
   const [history, setHistory] = useState<TurnHistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [isManualEditing, setIsManualEditing] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Initialize and load session question
+  // Initialize and load active session details
   useEffect(() => {
     async function fetchSession() {
       try {
@@ -62,7 +66,7 @@ export default function InterviewRoomPage() {
           }
         }
       } catch {
-        // Fallback handled gracefully
+        // Handled gracefully
       }
     }
     fetchSession();
@@ -83,7 +87,8 @@ export default function InterviewRoomPage() {
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setErrorMsg("Voice input not supported in this browser. Please type below.");
+      setIsManualEditing(true);
+      setErrorMsg("Voice recognition not supported in this browser. Please type below.");
       return;
     }
 
@@ -109,7 +114,7 @@ export default function InterviewRoomPage() {
       rec.onerror = (event: any) => {
         setIsRecording(false);
         if (event.error !== "no-speech") {
-          setErrorMsg(`Mic note: ${event.error}. You can also type manually.`);
+          setIsManualEditing(true);
         }
       };
 
@@ -119,7 +124,7 @@ export default function InterviewRoomPage() {
       rec.start();
     } catch {
       setIsRecording(false);
-      setErrorMsg("Unable to access microphone.");
+      setIsManualEditing(true);
     }
   };
 
@@ -137,7 +142,7 @@ export default function InterviewRoomPage() {
 
   const handleSubmit = async () => {
     if (!spokenTranscript.trim()) {
-      setErrorMsg("Please speak or enter your answer.");
+      setErrorMsg("Please speak or type your answer before submitting.");
       return;
     }
 
@@ -201,119 +206,138 @@ export default function InterviewRoomPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto w-full py-4 space-y-6">
+    <div className="max-w-3xl mx-auto w-full py-4 space-y-8">
       <audio
         ref={audioRef}
         onEnded={() => setIsPlayingAudio(false)}
         className="hidden"
       />
 
-      {/* Top Session Progress Bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
-            Phase {currentTurn} of {maxTurns}
+      {/* Top Session Status Bar */}
+      <div className="flex items-center justify-between border-b border-zinc-200/80 pb-4">
+        <div className="flex items-center gap-3">
+          <span className="px-3 py-1 rounded-full bg-zinc-950 text-white text-[11px] font-semibold uppercase tracking-wider">
+            Inquiry {currentTurn} of {maxTurns}
           </span>
-          <span className="text-zinc-200">•</span>
-          <span className="text-xs text-zinc-500 font-medium">Technical Calibration</span>
+          <span className="text-xs text-zinc-400 font-medium">Technical Deep Dive</span>
         </div>
 
         <button
           type="button"
           onClick={handleEndEarly}
           disabled={isSubmitting}
-          className="text-xs text-zinc-400 hover:text-zinc-950 transition"
+          className="text-xs font-semibold text-zinc-400 hover:text-zinc-950 transition uppercase tracking-wider"
         >
           End & Review
         </button>
       </div>
 
       {errorMsg && (
-        <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-900 text-xs flex items-center gap-2">
+        <div className="p-3.5 rounded-xl border border-red-200 bg-red-50 text-red-900 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Focus Audio & Teleprompter Card */}
-      <div className="bg-white rounded-3xl border border-zinc-200/80 p-8 shadow-sm text-center space-y-6">
-        {/* Sleek Waveform / Voice Status */}
-        <div className="flex items-center justify-center gap-2">
-          {isPlayingAudio ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-950">
-              <Volume2 className="w-3.5 h-3.5 animate-pulse" />
-              <span>Interviewer Speaking</span>
-            </span>
-          ) : isRecording ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Listening...</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-              <VolumeX className="w-3.5 h-3.5" />
-              <span>Ready for Answer</span>
-            </span>
+      {/* Hero Voice Visualizer Stage */}
+      <div className="premium-card rounded-3xl p-10 text-center relative overflow-hidden flex flex-col items-center justify-center space-y-6">
+        {/* Subtle Radial Glow */}
+        <div className="absolute inset-0 bg-radial from-zinc-100/50 to-transparent pointer-events-none" />
+
+        {/* Concentric Voice Orb */}
+        <div className="relative flex items-center justify-center">
+          <div
+            className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-500 ${
+              isPlayingAudio
+                ? "bg-zinc-950 text-white shadow-2xl scale-105"
+                : isRecording
+                ? "bg-emerald-600 text-white shadow-xl scale-105"
+                : "bg-zinc-100 text-zinc-400 border border-zinc-200/80"
+            }`}
+          >
+            {isPlayingAudio ? (
+              <Volume2 className="w-8 h-8 animate-pulse" />
+            ) : isRecording ? (
+              <Mic className="w-8 h-8 animate-pulse" />
+            ) : (
+              <VolumeX className="w-7 h-7" />
+            )}
+          </div>
+
+          {/* Animated concentric pulse ring when active */}
+          {(isPlayingAudio || isRecording) && (
+            <div className="absolute inset-0 rounded-full border border-zinc-950/20 animate-pulse-ring pointer-events-none" />
           )}
         </div>
 
-        {/* Minimalist Sound Wave Indicator */}
-        <div className="h-10 flex items-center justify-center gap-1">
-          {[14, 26, 38, 18, 44, 28, 12, 36, 20, 48, 30, 16].map((h, i) => (
-            <span
-              key={i}
-              style={{
-                height: isPlayingAudio || isRecording ? `${h}px` : "4px",
-                transition: "height 0.12s ease",
-              }}
-              className={`w-1 rounded-full ${
-                isPlayingAudio ? "bg-zinc-950" : isRecording ? "bg-emerald-500" : "bg-zinc-200"
-              }`}
-            />
-          ))}
+        {/* Visualizer Status Label */}
+        <div className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">
+          {isPlayingAudio ? "Interviewer Inquiring" : isRecording ? "Listening to Response" : "Awaiting Candidate"}
         </div>
 
-        {/* Question Heading */}
-        <h2 className="text-lg md:text-xl font-medium text-zinc-950 tracking-tight leading-relaxed max-w-xl mx-auto">
-          {currentQuestion || "Preparing interview question..."}
-        </h2>
+        {/* Teleprompter Question Heading */}
+        <div className="max-w-xl mx-auto pt-2">
+          <h2 className="text-xl md:text-2xl font-semibold text-zinc-950 tracking-tight leading-snug">
+            {currentQuestion || "Formulating technical question..."}
+          </h2>
+        </div>
       </div>
 
-      {/* Real-time Subtitle / Spoken Transcript Bar */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 p-4 shadow-sm space-y-3">
-        <div className="flex items-center justify-between text-[11px] font-medium text-zinc-400">
-          <span>Candidate Response</span>
-          <span>{spokenTranscript.split(/\s+/).filter(Boolean).length} words</span>
+      {/* Candidate Response Capture Card */}
+      <div className="premium-card rounded-3xl p-6 space-y-4">
+        <div className="flex items-center justify-between text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <span>Candidate Response</span>
+            {isRecording && (
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] text-zinc-400 font-normal">
+              {spokenTranscript.split(/\s+/).filter(Boolean).length} words
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsManualEditing(!isManualEditing)}
+              className="text-zinc-400 hover:text-zinc-700 transition"
+              title="Toggle manual text edit"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <textarea
-          rows={3}
+          rows={4}
           value={spokenTranscript}
           onChange={(e) => setSpokenTranscript(e.target.value)}
-          placeholder="Speak into your microphone or type your response here..."
-          className="w-full text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none resize-none leading-relaxed bg-transparent"
+          placeholder="Click the microphone to speak your response, or type manually..."
+          className="w-full px-4 py-3 rounded-2xl border border-zinc-200 text-xs text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-950/10 focus:border-zinc-950 transition leading-relaxed bg-zinc-50/40 resize-none"
         />
 
-        {/* Floating Minimal Controls */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+        {/* Floating Controls Dock */}
+        <div className="flex items-center justify-between pt-2">
           <button
             type="button"
             onClick={handleToggleMic}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-2 border shadow-sm ${
               isRecording
                 ? "bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
-                : "bg-zinc-50 border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+                : "bg-white border-zinc-200 text-zinc-800 hover:bg-zinc-50"
             }`}
           >
             {isRecording ? <Square className="w-3.5 h-3.5 fill-current" /> : <Mic className="w-3.5 h-3.5" />}
-            <span>{isRecording ? "Stop" : "Mic"}</span>
+            <span>{isRecording ? "Stop Speaking" : "Start Speaking"}</span>
           </button>
 
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || !spokenTranscript.trim()}
-            className="px-4 py-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium transition flex items-center gap-1.5 disabled:opacity-40 shadow-sm"
+            className="px-6 py-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-medium uppercase tracking-wider transition flex items-center gap-2 shadow-md disabled:opacity-40"
           >
             {isSubmitting ? (
               <>
@@ -322,7 +346,7 @@ export default function InterviewRoomPage() {
               </>
             ) : (
               <>
-                <span>Submit</span>
+                <span>Submit Answer</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </>
             )}
@@ -332,25 +356,25 @@ export default function InterviewRoomPage() {
 
       {/* Collapsible History Drawer */}
       {history.length > 0 && (
-        <div className="border border-zinc-200/70 rounded-xl overflow-hidden bg-white">
+        <div className="premium-card rounded-2xl overflow-hidden">
           <button
             type="button"
             onClick={() => setShowHistory(!showHistory)}
-            className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-zinc-500 hover:bg-zinc-50 transition"
+            className="w-full p-4 flex items-center justify-between text-xs text-zinc-600 hover:bg-zinc-50 transition"
           >
-            <span className="flex items-center gap-1.5 font-medium">
-              <History className="w-3.5 h-3.5" />
-              <span>Transcript Timeline ({history.length})</span>
+            <span className="flex items-center gap-2 font-semibold">
+              <History className="w-4 h-4 text-zinc-400" />
+              <span>Interview Timeline ({history.length} completed turns)</span>
             </span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+            <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${showHistory ? "rotate-180" : ""}`} />
           </button>
 
           {showHistory && (
-            <div className="p-4 border-t border-zinc-100 space-y-3 max-h-60 overflow-y-auto text-xs">
+            <div className="p-4 border-t border-zinc-100 space-y-3 max-h-64 overflow-y-auto text-xs">
               {history.map((item, idx) => (
-                <div key={idx} className="space-y-1 pb-2 border-b border-zinc-50 last:border-none">
-                  <div className="font-semibold text-zinc-800">Q{item.turn_number}: {item.question}</div>
-                  <div className="text-zinc-600 pl-2 border-l border-zinc-200">{item.answer}</div>
+                <div key={idx} className="p-3 rounded-xl bg-zinc-50 border border-zinc-100 space-y-1.5">
+                  <div className="font-semibold text-zinc-900">Q{item.turn_number}: {item.question}</div>
+                  <div className="text-zinc-600 pl-2.5 border-l-2 border-zinc-300">{item.answer}</div>
                 </div>
               ))}
             </div>
