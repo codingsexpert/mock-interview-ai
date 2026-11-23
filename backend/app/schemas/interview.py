@@ -15,7 +15,7 @@ class StartInterviewRequest(BaseModel):
     job_description: Optional[str] = Field(default=None, description="Optional job description")
     key_strengths: List[str] = Field(default_factory=list, description="Candidate strengths from resume")
     suggested_topics: List[Dict[str, Any]] = Field(default_factory=list, description="Topics from resume analysis")
-    max_turns: int = Field(default=5, ge=1, le=10, description="Total turns before automatic completion")
+    max_turns: int = Field(default=10, ge=1, le=50, description="Total turns per round before extension prompt")
     voice_id: str = Field(default="en-US-cooper", description="Voice for interviewer")
 
 class StartInterviewResponse(BaseModel):
@@ -35,7 +35,20 @@ class SubmitAnswerResponse(BaseModel):
     session_id: str
     turn_number: int
     is_completed: bool
+    round_completed: bool = False
     next_question: Optional[str] = None
+    audio_url: Optional[str] = None
+    error: Optional[str] = None
+
+class ExtendInterviewRequest(BaseModel):
+    session_id: str
+    additional_turns: int = Field(default=10, ge=1, le=20)
+
+class ExtendInterviewResponse(BaseModel):
+    success: bool
+    session_id: str
+    new_max_turns: int
+    next_question: str
     audio_url: Optional[str] = None
     error: Optional[str] = None
 

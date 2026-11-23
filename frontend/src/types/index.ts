@@ -29,6 +29,7 @@ export interface SubmitAnswerResponse {
   session_id: string;
   turn_number: number;
   is_completed: boolean;
+  round_completed?: boolean;
   next_question?: string;
   audio_url?: string;
   error?: string;

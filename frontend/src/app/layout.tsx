@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MockInterview | Executive Technical Assessment",
-  description: "AI-powered voice interview platform calibrated to candidate resumes and target technical roles.",
+  title: "MockInterview AI | Voice Technical Assessment Platform",
+  description: "Live voice-first mock interviews with dynamic streaming questions, resume calibration, and rubric scorecards.",
 };
 
 export default function RootLayout({
@@ -13,35 +13,39 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col bg-[#fafafa] text-zinc-950 font-sans selection:bg-zinc-900 selection:text-white">
-        {/* Sleek Top Navigation */}
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-200/80">
+      <body className="min-h-full flex flex-col bg-ambient-glow text-zinc-950 font-sans selection:bg-indigo-600 selection:text-white">
+        {/* Dynamic Glassmorphism Header */}
+        <header className="sticky top-0 z-50 bg-white/75 backdrop-blur-xl border-b border-slate-200/80 shadow-xs">
           <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
             <a href="/" className="flex items-center gap-3 group">
-              <div className="w-8 h-8 rounded-lg bg-zinc-950 text-white flex items-center justify-center font-semibold text-xs tracking-wider shadow-sm group-hover:scale-105 transition-transform">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-cyan-500 text-white flex items-center justify-center font-bold text-xs tracking-wider shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                 MI
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm tracking-tight text-zinc-900 leading-none">
-                  MockInterview
-                </span>
-                <span className="text-[10px] text-zinc-400 font-medium tracking-wider uppercase mt-0.5">
-                  Assessment Engine
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-base tracking-tight bg-gradient-to-r from-zinc-950 via-indigo-950 to-zinc-900 bg-clip-text text-transparent">
+                    MockInterview
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 uppercase tracking-wider">
+                    AI Studio
+                  </span>
+                </div>
               </div>
             </a>
 
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-50 border border-zinc-200/80 text-xs font-medium text-zinc-600 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[11px] font-semibold text-zinc-700 tracking-wide">Falcon Voice Ready</span>
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 border border-slate-200 shadow-xs text-xs font-medium text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 animate-pulse"></span>
+                <span className="text-[11px] font-semibold text-slate-700 tracking-wide">
+                  Murf Falcon-2.1 Audio Ready
+                </span>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Main Application Container */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 flex flex-col justify-center">
+        {/* Main Workspace */}
+        <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 flex flex-col justify-center">
           {children}
         </main>
       </body>

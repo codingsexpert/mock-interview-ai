@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -14,8 +14,11 @@ import {
   Layers,
   Sparkles,
   ShieldCheck,
-  SlidersHorizontal,
-  X
+  Cpu,
+  Brain,
+  Volume2,
+  X,
+  Play
 } from "lucide-react";
 import { ExperienceLevel, ResumeParsedData } from "@/types";
 
@@ -28,7 +31,11 @@ export default function SetupPage() {
   const [resumeText, setResumeText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // Calibration Loading Pipeline States
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [pipelineStep, setPipelineStep] = useState<number>(0);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+
   const [parsedData, setParsedData] = useState<ResumeParsedData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -43,6 +50,32 @@ export default function SetupPage() {
       setSelectedFile(file);
       setErrorMsg(null);
     }
+  };
+
+  const runPipelineAnimation = () => {
+    setPipelineStep(1);
+    setProgressPercent(15);
+
+    const t1 = setTimeout(() => {
+      setPipelineStep(2);
+      setProgressPercent(45);
+    }, 700);
+
+    const t2 = setTimeout(() => {
+      setPipelineStep(3);
+      setProgressPercent(75);
+    }, 1500);
+
+    const t3 = setTimeout(() => {
+      setPipelineStep(4);
+      setProgressPercent(95);
+    }, 2200);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   };
 
   const handleAnalyze = async () => {
@@ -61,6 +94,7 @@ export default function SetupPage() {
 
     setIsAnalyzing(true);
     setErrorMsg(null);
+    const stopAnim = runPipelineAnimation();
 
     try {
       let res;
@@ -88,13 +122,16 @@ export default function SetupPage() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.detail || data.error || "Resume analysis failed.");
+        throw new Error(data.detail || data.error || "Analysis failed.");
       }
 
-      setParsedData(data.data);
+      setProgressPercent(100);
+      setTimeout(() => {
+        setParsedData(data.data);
+        setIsAnalyzing(false);
+      }, 500);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to analyze resume.");
-    } finally {
       setIsAnalyzing(false);
     }
   };
@@ -113,7 +150,7 @@ export default function SetupPage() {
           experience_level: experienceLevel,
           key_strengths: parsedData.key_strengths,
           suggested_topics: parsedData.suggested_topics,
-          max_turns: 5,
+          max_turns: 10,
           voice_id: "en-US-cooper",
         }),
       });
@@ -132,76 +169,76 @@ export default function SetupPage() {
 
   return (
     <div className="max-w-2xl mx-auto w-full">
-      {/* Editorial Header */}
-      <div className="text-center mb-10 space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200/60 text-[11px] font-semibold text-zinc-600 uppercase tracking-widest mb-1 shadow-sm">
-          <span>AI Interview Simulation</span>
+      {/* Radiant Animated Hero Header */}
+      <div className="text-center mb-8 space-y-3">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10 border border-indigo-200/60 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+          <span className="text-xs font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent uppercase tracking-wider">
+            Voice-First Assessment Studio
+          </span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-zinc-950">
-          Technical Assessment Studio
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-950">
+          Prepare for Your Next Technical Role
         </h1>
-        <p className="text-xs text-zinc-500 max-w-md mx-auto">
-          Calibrate realistic hiring inquiries tailored specifically to your resume.
+        <p className="text-xs md:text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+          Upload your resume to calibrate a live 10-question AI voice interview tailored to your actual engineering experience.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="mb-6 p-3.5 rounded-xl border border-red-200 bg-red-50/80 text-red-900 text-xs flex items-center gap-2.5 shadow-sm">
-          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+        <div className="mb-6 p-4 rounded-2xl border border-red-200 bg-red-50/90 text-red-900 text-xs flex items-center gap-3 shadow-sm">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
           <span className="flex-1 font-medium">{errorMsg}</span>
         </div>
       )}
 
-      {!parsedData ? (
-        <div className="premium-card rounded-3xl p-8 space-y-6">
+      {/* Dynamic State 1: Input Setup Form */}
+      {!parsedData && !isAnalyzing && (
+        <div className="glass-panel-elevated rounded-3xl p-8 space-y-6">
           {/* Target Role Field */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-2">
-                <Briefcase className="w-3.5 h-3.5 text-zinc-500" />
-                <span>Target Job Title</span>
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-indigo-600" />
+                <span>Target Job Role</span>
               </label>
-              <span className="text-[11px] text-zinc-400">Required</span>
+              <span className="text-[11px] font-semibold text-indigo-600">Primary Calibration</span>
             </div>
             <input
               type="text"
-              placeholder="e.g. Senior Backend Engineer, Staff DevOps, Full Stack Developer"
+              placeholder="e.g. Senior Backend Engineer, Full Stack Architect, Staff DevOps"
               value={jobTitle}
               onChange={(e) => setJobTitle(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-sm text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-950/10 focus:border-zinc-950 transition bg-zinc-50/40"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition bg-slate-50/50 shadow-xs"
             />
           </div>
 
-          {/* Interactive Seniority Grid */}
+          {/* Seniority Grid */}
           <div>
-            <label className="block text-xs font-semibold text-zinc-700 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-              <Layers className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Seniority Calibration</span>
+            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-violet-600" />
+              <span>Target Seniority Level</span>
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
               {[
-                { id: "entry", title: "Entry", desc: "0 - 2 Years" },
-                { id: "mid", title: "Mid", desc: "3 - 5 Years" },
-                { id: "senior", title: "Senior", desc: "5 - 8 Years" },
-                { id: "lead", title: "Lead / Staff", desc: "8+ Years" },
+                { id: "entry", title: "Entry", exp: "0 - 2 Yrs", color: "from-blue-500 to-indigo-500" },
+                { id: "mid", title: "Mid", exp: "3 - 5 Yrs", color: "from-indigo-500 to-violet-500" },
+                { id: "senior", title: "Senior", exp: "5 - 8 Yrs", color: "from-violet-500 to-purple-600" },
+                { id: "lead", title: "Lead / Staff", exp: "8+ Yrs", color: "from-purple-600 to-cyan-500" },
               ].map((tier) => (
                 <button
                   key={tier.id}
                   type="button"
                   onClick={() => setExperienceLevel(tier.id as ExperienceLevel)}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                  className={`p-3.5 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between ${
                     experienceLevel === tier.id
-                      ? "bg-zinc-950 text-white border-zinc-950 shadow-md"
-                      : "bg-white text-zinc-800 border-zinc-200 hover:border-zinc-300"
+                      ? "bg-slate-950 text-white border-slate-950 shadow-md scale-102 ring-2 ring-indigo-500/40"
+                      : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                   }`}
                 >
-                  <span className="text-xs font-semibold">{tier.title}</span>
-                  <span
-                    className={`text-[10px] mt-1 ${
-                      experienceLevel === tier.id ? "text-zinc-400" : "text-zinc-400"
-                    }`}
-                  >
-                    {tier.desc}
+                  <span className="text-xs font-bold">{tier.title}</span>
+                  <span className={`text-[10px] mt-1 font-medium ${experienceLevel === tier.id ? "text-indigo-300" : "text-slate-400"}`}>
+                    {tier.exp}
                   </span>
                 </button>
               ))}
@@ -211,18 +248,18 @@ export default function SetupPage() {
           {/* Resume Upload Dropzone */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-zinc-700 uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-zinc-500" />
-                <span>Resume Background</span>
+              <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-cyan-600" />
+                <span>Candidate Resume</span>
               </label>
               <div className="flex items-center gap-2 text-xs">
                 <button
                   type="button"
                   onClick={() => setInputMode("file")}
-                  className={`px-2.5 py-1 rounded-md transition font-medium ${
+                  className={`px-3 py-1 rounded-lg transition font-semibold ${
                     inputMode === "file"
-                      ? "bg-zinc-100 text-zinc-950"
-                      : "text-zinc-400 hover:text-zinc-600"
+                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                      : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   PDF Document
@@ -230,10 +267,10 @@ export default function SetupPage() {
                 <button
                   type="button"
                   onClick={() => setInputMode("text")}
-                  className={`px-2.5 py-1 rounded-md transition font-medium ${
+                  className={`px-3 py-1 rounded-lg transition font-semibold ${
                     inputMode === "text"
-                      ? "bg-zinc-100 text-zinc-950"
-                      : "text-zinc-400 hover:text-zinc-600"
+                      ? "bg-indigo-50 text-indigo-700 border border-indigo-200/60"
+                      : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   Raw Text
@@ -242,45 +279,45 @@ export default function SetupPage() {
             </div>
 
             {inputMode === "file" ? (
-              <div className="relative border border-dashed border-zinc-200 rounded-2xl p-6 text-center hover:border-zinc-400 transition bg-zinc-50/30 group">
+              <div className="relative border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-7 text-center transition-all bg-gradient-to-b from-white to-slate-50/50 group">
                 <input
                   type="file"
-                  id="resume-dropzone"
+                  id="resume-drop"
                   accept=".pdf"
                   onChange={handleFileChange}
                   className="hidden"
                 />
                 {selectedFile ? (
-                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-zinc-200">
+                  <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center">
-                        <Check className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 text-white flex items-center justify-center shadow-xs">
+                        <Check className="w-5 h-5 stroke-[2.5]" />
                       </div>
                       <div className="text-left">
-                        <div className="text-xs font-semibold text-zinc-950 line-clamp-1">{selectedFile.name}</div>
-                        <div className="text-[10px] text-zinc-400">{(selectedFile.size / 1024).toFixed(1)} KB</div>
+                        <div className="text-xs font-bold text-slate-900 line-clamp-1">{selectedFile.name}</div>
+                        <div className="text-[11px] text-slate-400 font-medium">{(selectedFile.size / 1024).toFixed(1)} KB PDF Ready</div>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedFile(null)}
-                      className="text-zinc-400 hover:text-zinc-700 p-1"
+                      className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
                   <label
-                    htmlFor="resume-dropzone"
+                    htmlFor="resume-drop"
                     className="cursor-pointer flex flex-col items-center justify-center gap-2 py-3"
                   >
-                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center border border-zinc-200 text-zinc-600 shadow-sm group-hover:scale-105 transition-transform">
-                      <Upload className="w-4 h-4 text-zinc-700" />
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-50 via-purple-50 to-cyan-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs group-hover:scale-108 transition-transform">
+                      <Upload className="w-5 h-5 text-indigo-600" />
                     </div>
-                    <div className="text-xs font-medium text-zinc-900 mt-1">
-                      Drop resume PDF here, or <span className="underline underline-offset-2">browse</span>
+                    <div className="text-xs font-bold text-slate-900 mt-1">
+                      Drag & drop your resume PDF, or <span className="text-indigo-600 underline underline-offset-2">browse</span>
                     </div>
-                    <div className="text-[10px] text-zinc-400">PDF documents up to 10MB</div>
+                    <div className="text-[11px] text-slate-400 font-medium">PDF documents up to 10MB</div>
                   </label>
                 )}
               </div>
@@ -290,68 +327,120 @@ export default function SetupPage() {
                 value={resumeText}
                 onChange={(e) => setResumeText(e.target.value)}
                 placeholder="Paste your past technical experience, systems built, and core competencies..."
-                className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-xs text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-950/10 focus:border-zinc-950 transition bg-zinc-50/30"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-xs text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition bg-slate-50/50 resize-none"
               />
             )}
           </div>
 
-          {/* Action CTA */}
+          {/* Animated Multi-Gradient Submit Button */}
           <div className="pt-2">
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={isAnalyzing}
-              className="w-full py-3.5 px-4 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 disabled:opacity-50 shadow-md"
+              className="btn-gradient-primary w-full py-4 px-6 rounded-2xl font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-2.5 shadow-lg"
             >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Calibrating Technical Rubric...</span>
-                </>
-              ) : (
-                <>
-                  <span>Calibrate Assessment</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
+              <span>Calibrate Assessment Pipeline</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-      ) : (
-        /* Executive Calibration Briefing Card */
-        <div className="premium-card rounded-3xl p-8 space-y-6">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                <span>Assessment Calibrated</span>
+      )}
+
+      {/* Dynamic State 2: Interactive Real-time Extraction Animation */}
+      {isAnalyzing && (
+        <div className="glass-panel-elevated rounded-3xl p-8 space-y-6 text-center animate-in fade-in duration-300">
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 text-white flex items-center justify-center shadow-xl shadow-indigo-500/25 animate-pulse">
+              <Brain className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-950">Calibrating Technical Rubric</h3>
+            <p className="text-xs text-slate-500">Processing resume semantics against {jobTitle} benchmark...</p>
+          </div>
+
+          {/* Animated Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+              <span>Calibration Progress</span>
+              <span className="text-indigo-600">{progressPercent}%</span>
+            </div>
+            <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/80">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Multi-Step Pipeline Visualizer */}
+          <div className="space-y-3 pt-2 text-left">
+            {[
+              { step: 1, label: "Extracting resume text & document structure...", icon: FileText },
+              { step: 2, label: "Synthesizing candidate skills & architecture background...", icon: Cpu },
+              { step: 3, label: `Aligning profile with ${jobTitle} (${experienceLevel}) expectations...`, icon: Briefcase },
+              { step: 4, label: "Initializing 10-Question assessment engine & Murf voice synthesizer...", icon: Volume2 },
+            ].map((st) => (
+              <div
+                key={st.step}
+                className={`p-3.5 rounded-xl border flex items-center justify-between transition-all duration-300 ${
+                  pipelineStep > st.step
+                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                    : pipelineStep === st.step
+                    ? "bg-indigo-50 border-indigo-200 text-indigo-900 shadow-xs"
+                    : "bg-slate-50/50 border-slate-200/60 text-slate-400"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <st.icon className={`w-4 h-4 ${pipelineStep >= st.step ? "text-indigo-600" : "text-slate-400"}`} />
+                  <span className="text-xs font-semibold">{st.label}</span>
+                </div>
+                {pipelineStep > st.step ? (
+                  <Check className="w-4 h-4 text-emerald-600 stroke-[2.5]" />
+                ) : pipelineStep === st.step ? (
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                ) : (
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                )}
               </div>
-              <h2 className="text-lg font-semibold text-zinc-950 mt-2">
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic State 3: Assessment Readiness Card */}
+      {parsedData && !isAnalyzing && (
+        <div className="glass-panel-elevated rounded-3xl p-8 space-y-6 animate-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 text-[11px] font-bold text-emerald-800 uppercase tracking-wider shadow-xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>10-Question Technical Round Ready</span>
+              </div>
+              <h2 className="text-xl font-extrabold text-slate-950 mt-2">
                 {parsedData.candidate_name}
               </h2>
-              <p className="text-xs text-zinc-500">
-                Targeting {jobTitle} ({experienceLevel} tier) • ~{parsedData.total_experience_years} years estimated experience
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Targeting <span className="font-bold text-slate-800">{jobTitle}</span> ({experienceLevel} level) • ~{parsedData.total_experience_years} Years Experience
               </p>
             </div>
             <button
               type="button"
               onClick={() => setParsedData(null)}
-              className="text-xs font-medium text-zinc-400 hover:text-zinc-950 transition"
+              className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition"
             >
               Modify
             </button>
           </div>
 
-          {/* Key Competencies Identified */}
+          {/* Detected Competencies */}
           <div>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2.5">
-              Assessed Skills
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2.5">
+              Assessed Engineering Competencies
             </span>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {parsedData.key_strengths.map((str, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1 rounded-lg text-xs font-medium bg-zinc-100 border border-zinc-200/80 text-zinc-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 text-indigo-900 shadow-xs"
                 >
                   {str}
                 </span>
@@ -359,19 +448,19 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Targeted Focus Topics */}
+          {/* 10-Question Round Curriculum Focus */}
           <div>
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block mb-2.5">
-              Inquiry Focus Areas
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2.5">
+              Round Focus Curriculum
             </span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {parsedData.suggested_topics.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-3 rounded-xl bg-zinc-50 border border-zinc-200/70 text-xs flex items-center justify-between"
+                  className="p-3.5 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-xs"
                 >
-                  <span className="font-semibold text-zinc-900">{item.topic}</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-zinc-200 text-zinc-700 font-bold uppercase tracking-wider">
+                  <span className="font-bold text-slate-900">{item.topic}</span>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-extrabold uppercase tracking-wider">
                     {item.difficulty}
                   </span>
                 </div>
@@ -379,22 +468,23 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Launch Assessment CTA */}
+          {/* Interactive Start Mock Interview Button */}
           <div className="pt-2">
             <button
               type="button"
               onClick={handleLaunch}
               disabled={isStarting}
-              className="w-full py-4 px-6 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider uppercase transition flex items-center justify-center gap-2.5 shadow-lg disabled:opacity-50"
+              className="btn-gradient-primary w-full py-4 px-6 rounded-2xl font-bold text-xs tracking-wider uppercase flex items-center justify-center gap-3 shadow-xl disabled:opacity-50"
             >
               {isStarting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Connecting Falcon Voice Engine...</span>
+                  <span>Connecting Live Murf Voice Engine...</span>
                 </>
               ) : (
                 <>
-                  <span>Launch Voice Interview</span>
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Start Mock Interview (10 Questions)</span>
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}

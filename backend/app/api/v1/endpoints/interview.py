@@ -7,6 +7,8 @@ from app.schemas.interview import (
     StartInterviewResponse,
     SubmitAnswerRequest,
     SubmitAnswerResponse,
+    ExtendInterviewRequest,
+    ExtendInterviewResponse,
     InterviewReportResponse
 )
 from app.services.interviewer_service import InterviewerService
@@ -94,7 +96,7 @@ async def submit_turn(payload: SubmitAnswerRequest):
     current_turn_idx = session["current_turn"] - 1
     session["turns"][current_turn_idx]["candidate_transcript"] = payload.candidate_transcript
 
-    # Check if max turns reached
+    # Check if max turns reached for this round
     if session["current_turn"] >= session["max_turns"]:
         session["is_completed"] = True
         return SubmitAnswerResponse(
@@ -102,6 +104,7 @@ async def submit_turn(payload: SubmitAnswerRequest):
             session_id=payload.session_id,
             turn_number=session["current_turn"],
             is_completed=True,
+            round_completed=True,
             next_question=None,
             audio_url=None
         )
@@ -133,6 +136,46 @@ async def submit_turn(payload: SubmitAnswerRequest):
         session_id=payload.session_id,
         turn_number=next_turn_number,
         is_completed=False,
+        round_completed=False,
+        next_question=next_q,
+        audio_url=voice_res.audio_url
+    )
+
+@router.post("/extend", response_model=ExtendInterviewResponse)
+async def extend_interview_session(payload: ExtendInterviewRequest):
+    session = active_sessions.get(payload.session_id)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+
+    session["max_turns"] += payload.additional_turns
+    session["is_completed"] = False
+
+    next_turn_number = len(session["turns"]) + 1
+    session["current_turn"] = next_turn_number
+
+    next_q = interviewer_service.generate_next_turn(
+        job_title=session["job_title"],
+        experience_level=session["experience_level"],
+        history=session["turns"],
+        suggested_topics=session["suggested_topics"]
+    )
+
+    voice_res = await murf_service.generate_speech(
+        text=next_q,
+        voice_id=session.get("voice_id", "en-US-cooper")
+    )
+
+    session["turns"].append({
+        "turn_number": next_turn_number,
+        "interviewer_question": next_q,
+        "interviewer_audio_url": voice_res.audio_url,
+        "candidate_transcript": None
+    })
+
+    return ExtendInterviewResponse(
+        success=True,
+        session_id=payload.session_id,
+        new_max_turns=session["max_turns"],
         next_question=next_q,
         audio_url=voice_res.audio_url
     )
