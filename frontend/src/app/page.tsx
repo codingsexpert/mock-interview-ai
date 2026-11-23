@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Upload,
@@ -18,7 +18,11 @@ import {
   Brain,
   Volume2,
   X,
-  Play
+  Play,
+  Mic,
+  Activity,
+  Headphones,
+  CheckCircle2
 } from "lucide-react";
 import { ExperienceLevel, ResumeParsedData } from "@/types";
 
@@ -39,6 +43,10 @@ export default function SetupPage() {
   const [parsedData, setParsedData] = useState<ResumeParsedData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+
+  // Greenroom mic test
+  const [micTestActive, setMicTestActive] = useState<boolean>(false);
+  const [micLevel, setMicLevel] = useState<number>(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -94,7 +102,7 @@ export default function SetupPage() {
 
     setIsAnalyzing(true);
     setErrorMsg(null);
-    const stopAnim = runPipelineAnimation();
+    runPipelineAnimation();
 
     try {
       let res;
@@ -136,6 +144,29 @@ export default function SetupPage() {
     }
   };
 
+  const testMic = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicTestActive(true);
+      const audioCtx = new AudioContext();
+      const analyser = audioCtx.createAnalyser();
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 64;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      const updateLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
+        setMicLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        if (stream.active) requestAnimationFrame(updateLevel);
+      };
+      updateLevel();
+    } catch {
+      setErrorMsg("Microphone permission required for voice interview.");
+    }
+  };
+
   const handleLaunch = async () => {
     if (!parsedData) return;
     setIsStarting(true);
@@ -174,14 +205,14 @@ export default function SetupPage() {
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-cyan-500/10 border border-indigo-200/60 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
           <span className="text-xs font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 bg-clip-text text-transparent uppercase tracking-wider">
-            Voice-First Assessment Studio
+            Conversational Voice AI
           </span>
         </div>
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-950">
-          Prepare for Your Next Technical Role
+          Real-Time Technical Mock Interview
         </h1>
         <p className="text-xs md:text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
-          Upload your resume to calibrate a live 10-question AI voice interview tailored to your actual engineering experience.
+          Talk naturally with an AI hiring manager. Hands-free voice conversation with real-time speech synthesis and evaluation.
         </p>
       </div>
 
@@ -192,7 +223,7 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* Dynamic State 1: Input Setup Form */}
+      {/* State 1: Input Setup Form */}
       {!parsedData && !isAnalyzing && (
         <div className="glass-panel-elevated rounded-3xl p-8 space-y-6">
           {/* Target Role Field */}
@@ -217,14 +248,14 @@ export default function SetupPage() {
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-2">
               <Layers className="w-4 h-4 text-violet-600" />
-              <span>Target Seniority Level</span>
+              <span>Seniority Calibration</span>
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
               {[
-                { id: "entry", title: "Entry", exp: "0 - 2 Yrs", color: "from-blue-500 to-indigo-500" },
-                { id: "mid", title: "Mid", exp: "3 - 5 Yrs", color: "from-indigo-500 to-violet-500" },
-                { id: "senior", title: "Senior", exp: "5 - 8 Yrs", color: "from-violet-500 to-purple-600" },
-                { id: "lead", title: "Lead / Staff", exp: "8+ Yrs", color: "from-purple-600 to-cyan-500" },
+                { id: "entry", title: "Entry", exp: "0 - 2 Yrs" },
+                { id: "mid", title: "Mid", exp: "3 - 5 Yrs" },
+                { id: "senior", title: "Senior", exp: "5 - 8 Yrs" },
+                { id: "lead", title: "Lead / Staff", exp: "8+ Yrs" },
               ].map((tier) => (
                 <button
                   key={tier.id}
@@ -346,7 +377,7 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* Dynamic State 2: Interactive Real-time Extraction Animation */}
+      {/* State 2: Interactive Real-time Extraction Pipeline */}
       {isAnalyzing && (
         <div className="glass-panel-elevated rounded-3xl p-8 space-y-6 text-center animate-in fade-in duration-300">
           <div className="flex flex-col items-center justify-center space-y-3">
@@ -357,11 +388,11 @@ export default function SetupPage() {
             <p className="text-xs text-slate-500">Processing resume semantics against {jobTitle} benchmark...</p>
           </div>
 
-          {/* Animated Progress Bar */}
+          {/* Progress Bar */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-slate-600">
               <span>Calibration Progress</span>
-              <span className="text-indigo-600">{progressPercent}%</span>
+              <span className="text-indigo-600 font-extrabold">{progressPercent}%</span>
             </div>
             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/80">
               <div
@@ -406,52 +437,81 @@ export default function SetupPage() {
         </div>
       )}
 
-      {/* Dynamic State 3: Assessment Readiness Card */}
+      {/* State 3: Executive Interview Greenroom (Enhanced Post-Submit Screen) */}
       {parsedData && !isAnalyzing && (
         <div className="glass-panel-elevated rounded-3xl p-8 space-y-6 animate-in zoom-in-95 duration-300">
+          {/* Header Badge */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-5">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 text-[11px] font-bold text-emerald-800 uppercase tracking-wider shadow-xs">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-50 to-cyan-50 border border-emerald-200 text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>10-Question Technical Round Ready</span>
+                <span>Assessment Chamber Ready</span>
               </div>
               <h2 className="text-xl font-extrabold text-slate-950 mt-2">
-                {parsedData.candidate_name}
+                Candidate: {parsedData.candidate_name}
               </h2>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                Targeting <span className="font-bold text-slate-800">{jobTitle}</span> ({experienceLevel} level) • ~{parsedData.total_experience_years} Years Experience
+              <p className="text-xs text-slate-500 font-medium">
+                Calibrated for <span className="font-bold text-slate-800">{jobTitle}</span> ({experienceLevel}) • ~{parsedData.total_experience_years} Years Experience
               </p>
             </div>
             <button
               type="button"
               onClick={() => setParsedData(null)}
-              className="text-xs font-semibold text-slate-400 hover:text-slate-900 transition"
+              className="text-xs font-semibold text-slate-400 hover:text-slate-950 transition"
             >
-              Modify
+              Reconfigure
             </button>
           </div>
 
-          {/* Detected Competencies */}
-          <div>
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2.5">
-              Assessed Engineering Competencies
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {parsedData.key_strengths.map((str, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 text-indigo-900 shadow-xs"
-                >
-                  {str}
-                </span>
-              ))}
+          {/* Interview Persona & Setup Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/60 to-purple-50/60 border border-indigo-100 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                <Headphones className="w-4 h-4 text-indigo-600" />
+                <span>Interviewer Persona</span>
+              </div>
+              <div className="text-xs text-slate-700">
+                <span className="font-semibold text-slate-900">Marcus (Staff Technical Lead)</span>
+                <p className="text-[11px] text-slate-500 mt-0.5">Murf Falcon-2.1 conversational voice with adaptive follow-up probing.</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-cyan-50/60 to-blue-50/60 border border-cyan-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-bold text-cyan-900 uppercase tracking-wider">
+                  <Activity className="w-4 h-4 text-cyan-600" />
+                  <span>Interactive Voice Mode</span>
+                </div>
+                {!micTestActive && (
+                  <button
+                    type="button"
+                    onClick={testMic}
+                    className="text-[10px] font-bold text-cyan-700 underline"
+                  >
+                    Test Mic
+                  </button>
+                )}
+              </div>
+              <div className="text-xs text-slate-700">
+                <span className="font-semibold text-slate-900">Hands-Free Conversational Loop</span>
+                {micTestActive ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] text-emerald-600 font-bold">Mic Active:</span>
+                    <div className="flex-1 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-500 h-full transition-all" style={{ width: `${micLevel}%` }} />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500 mt-0.5">AI automatically asks questions as you finish speaking without clicking submit.</p>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* 10-Question Round Curriculum Focus */}
+          {/* Curriculum Focus Topics */}
           <div>
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2.5">
-              Round Focus Curriculum
+              10-Question Inquiry Breakdown
             </span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               {parsedData.suggested_topics.map((item, idx) => (
@@ -468,7 +528,7 @@ export default function SetupPage() {
             </div>
           </div>
 
-          {/* Interactive Start Mock Interview Button */}
+          {/* High-Impact Launch Assessment Button */}
           <div className="pt-2">
             <button
               type="button"
@@ -484,7 +544,7 @@ export default function SetupPage() {
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current" />
-                  <span>Start Mock Interview (10 Questions)</span>
+                  <span>Enter Live Voice Interview Room</span>
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}
