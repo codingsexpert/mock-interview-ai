@@ -47,11 +47,18 @@ export default function InterviewRoomPage() {
   useEffect(() => {
     async function fetchSession() {
       try {
-        const res = await fetch(`http://localhost:8000/api/v1/interview/${sessionId}/report`);
+        const res = await fetch(`http://localhost:8000/api/v1/interview/${sessionId}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.report && data.report.question_breakdown.length > 0) {
-            setCurrentQuestion(data.report.question_breakdown[0].question);
+          if (data.success && data.question_text) {
+            setCurrentQuestion(data.question_text);
+            setCurrentTurn(data.current_turn || 1);
+            if (data.audio_url) {
+              setAudioUrl(data.audio_url);
+            }
+            if (data.history && data.history.length > 0) {
+              setHistory(data.history);
+            }
           }
         }
       } catch {

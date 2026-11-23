@@ -137,6 +137,38 @@ async def submit_turn(payload: SubmitAnswerRequest):
         audio_url=voice_res.audio_url
     )
 
+@router.get("/{session_id}")
+async def get_session_status(session_id: str):
+    session = active_sessions.get(session_id)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Interview session not found")
+    
+    current_turn_idx = session["current_turn"] - 1
+    current_turn_data = session["turns"][current_turn_idx] if current_turn_idx < len(session["turns"]) else session["turns"][-1]
+    
+    completed_history = [
+        {
+            "turn_number": t["turn_number"],
+            "question": t["interviewer_question"],
+            "answer": t.get("candidate_transcript")
+        }
+        for t in session["turns"]
+        if t.get("candidate_transcript") is not None
+    ]
+
+    return {
+        "success": True,
+        "session_id": session_id,
+        "job_title": session["job_title"],
+        "experience_level": session["experience_level"],
+        "current_turn": session["current_turn"],
+        "max_turns": session["max_turns"],
+        "question_text": current_turn_data.get("interviewer_question"),
+        "audio_url": current_turn_data.get("interviewer_audio_url"),
+        "is_completed": session["is_completed"],
+        "history": completed_history
+    }
+
 @router.post("/{session_id}/complete", response_model=InterviewReportResponse)
 async def complete_interview(session_id: str):
     session = active_sessions.get(session_id)

@@ -81,7 +81,7 @@ INSTRUCTIONS FOR NEXT QUESTION:
 5. Output ONLY the question text. Strictly no emojis.
 """
         if not self.client:
-            last_answer = history[-1].get("candidate_transcript", "") if history else ""
+            last_answer = (history[-1].get("candidate_transcript") or "") if history else ""
             if len(last_answer.split()) < 15:
                 return "Could you elaborate on the specific technical implementation details and trade-offs you encountered there?"
             return f"Understood. Moving forward to another critical aspect of {job_title}: how do you approach reliability, automated testing, and handling failure modes in distributed environments?"

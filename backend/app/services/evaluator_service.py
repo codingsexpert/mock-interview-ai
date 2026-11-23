@@ -29,8 +29,8 @@ class EvaluatorService:
         transcript_formatted = []
         for t in turns:
             turn_num = t.get("turn_number", 1)
-            q = t.get("interviewer_question", "")
-            a = t.get("candidate_transcript", "No response recorded.")
+            q = t.get("interviewer_question") or "Interview question"
+            a = t.get("candidate_transcript") or "No response recorded."
             transcript_formatted.append(f"Turn {turn_num}:\nQuestion: {q}\nCandidate Answer: {a}\n")
         full_transcript = "\n".join(transcript_formatted)
 
@@ -90,12 +90,12 @@ Evaluate thoroughly and return a valid JSON object matching this schema exactly 
         breakdown = []
         for t in turns:
             turn_num = t.get("turn_number", 1)
-            q = t.get("interviewer_question", "Technical question")
-            a = t.get("candidate_transcript", "Demonstrated solid technical understanding.")
+            q = t.get("interviewer_question") or "Technical interview question"
+            a = t.get("candidate_transcript") or "Demonstrated foundational technical understanding."
             breakdown.append(QuestionBreakdownItem(
                 turn_number=turn_num,
                 question=q,
-                candidate_answer=a[:200],
+                candidate_answer=(a[:200] if a else "No response recorded."),
                 critique="Clear articulation of baseline principles with opportunity for deeper architectural justification.",
                 model_answer_points=[
                     "Clearly state technical trade-offs between alternative designs",
