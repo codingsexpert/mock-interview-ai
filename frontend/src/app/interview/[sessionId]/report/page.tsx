@@ -16,7 +16,10 @@ import {
   Download,
   Sparkles,
   TrendingUp,
-  Target
+  Target,
+  Copy,
+  Check,
+  Printer
 } from "lucide-react";
 import { InterviewReport } from "@/types";
 
@@ -28,7 +31,66 @@ export default function ScorecardReportPage() {
   const [report, setReport] = useState<InterviewReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [expandedTurn, setExpandedTurn] = useState<number | null>(1);
+  const [copiedSummary, setCopiedSummary] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleExportMarkdown = () => {
+    if (!report) return;
+
+    let md = `# AI Mock Interview Evaluation Scorecard\n\n`;
+    md += `**Overall Score**: ${Math.round(report.overall_score)}/100\n`;
+    md += `**Hiring Verdict**: ${report.hiring_verdict}\n\n`;
+    md += `## Executive Summary\n${report.executive_summary}\n\n`;
+    md += `## Category Breakdown\n`;
+    md += `- Technical Depth: ${Math.round(report.category_scores.technical_depth)}%\n`;
+    md += `- Communication Clarity: ${Math.round(report.category_scores.communication_clarity)}%\n`;
+    md += `- Problem Solving: ${Math.round(report.category_scores.problem_solving)}%\n`;
+    md += `- Experience Alignment: ${Math.round(report.category_scores.experience_alignment)}%\n\n`;
+    md += `## Key Strengths\n`;
+    report.strengths.forEach((s) => {
+      md += `- ${s}\n`;
+    });
+    md += `\n## Areas for Improvement\n`;
+    report.areas_for_improvement.forEach((a) => {
+      md += `- ${a}\n`;
+    });
+    md += `\n## Detailed Turn-by-Turn Breakdown\n\n`;
+    report.question_breakdown.forEach((q) => {
+      md += `### Question ${q.turn_number}: ${q.question}\n\n`;
+      md += `**Candidate Answer**:\n${q.candidate_answer}\n\n`;
+      md += `**Critique & Calibration**:\n${q.critique}\n\n`;
+      if (q.model_answer_points && q.model_answer_points.length > 0) {
+        md += `**Key Concepts Expected**:\n`;
+        q.model_answer_points.forEach((p) => {
+          md += `- ${p}\n`;
+        });
+        md += `\n`;
+      }
+      md += `---\n\n`;
+    });
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `interview_scorecard_${sessionId.slice(0, 8)}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopySummary = async () => {
+    if (!report) return;
+    const text = `Mock Interview Scorecard\nOverall Score: ${Math.round(report.overall_score)}/100\nVerdict: ${report.hiring_verdict}\nSummary: ${report.executive_summary}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedSummary(true);
+      setTimeout(() => setCopiedSummary(false), 2000);
+    } catch {
+      // Handled silently
+    }
+  };
 
   useEffect(() => {
     async function loadReport() {
@@ -107,11 +169,38 @@ export default function ScorecardReportPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-xs"
+            onClick={handleCopySummary}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-xs"
+          >
+            {copiedSummary ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="text-emerald-700">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                <span>Copy Summary</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportMarkdown}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Save Report</span>
+            <span>Export Markdown</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition shadow-xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-slate-500" />
+            <span>Print PDF</span>
           </button>
 
           <button
